@@ -94,7 +94,6 @@ Every change follows the same workflow, run from my laptop:
 - **RDS-managed master password** in Secrets Manager, injected into ECS at task start, so no secret is in code, state or the task definition.
 - **Checks before every commit** (TFLint, Checkov, gitleaks) so mistakes, insecure settings and leaked secrets are caught before they reach AWS or GitHub.
 - **Apply only a saved plan** so nothing changes between review and apply.
-- _Add your own decisions as you make them._
 
 ## Known limitations (good interview material)
 
@@ -103,7 +102,7 @@ Every change follows the same workflow, run from my laptop:
 
 ## Cost (approximate, us-east-1)
 
-Dev runs at roughly a few dollars per day, mostly the NAT gateway, ALB and RDS. Destroy dev when you're not working. _Fill in your real numbers from Cost Explorer._
+Dev runs at roughly a few dollars per day, mostly the NAT gateway, ALB and RDS. Destroy dev when you're not working.
 
 ## Teardown
 
@@ -115,7 +114,10 @@ terraform -chdir=envs/dev destroy
 
 ## Challenges and lessons learned
 
-_Write 2-3 real problems you hit, the cause and the fix._
+- **Terraform version too old for the config.** `terraform init` failed with *Unsupported Terraform Core version*, then *An argument named "use_lockfile" is not expected*. Native S3 locking needs Terraform 1.10+, and the code requires 1.11.4; my CLI was 1.8.4. Fix: upgraded Terraform rather than lowering `required_version`, since lowering it only moves the failure to the next newer feature.
+- **Running Terraform from a module folder.** Running `plan` inside `modules/alb` prompted for `public_subnet_ids`, because modules are not root configurations and get their inputs from the environment that calls them. Fix: always run from `envs/dev` or `envs/prod`, where the values come from `terraform.tfvars` and other modules' outputs.
+- **Provider deprecation.** AWS provider v6 deprecated `data.aws_region.*.name`. Fix: switched to `.region` and tightened the provider constraint to `>= 6.0, < 7.0` so the code and the constraint agree.
+- **A `.gitignore` that silently did nothing.** It was written from PowerShell in UTF-16, which Git can't read, so state files and `.terraform/` were not ignored. Fix: rewrote it as UTF-8 and checked `git status` before committing.
 
 ## Next steps
 

@@ -20,7 +20,7 @@ output "db_endpoint" {
 }
 
 output "db_secret_arn" {
-  value       = module.rds.master_user_secret_arn
+  value = module.rds.master_user_secret_arn
 }
 
 output "vpc_id" {

@@ -1,8 +1,8 @@
 variable "environment" {
-  type  = string 
+  type = string
 
   validation {
-    condition = contains(["dev", "prod"], var.environment)
+    condition     = contains(["dev", "prod"], var.environment)
     error_message = "environment must be \"dev\" or \"prod\"."
   }
 }
@@ -39,7 +39,7 @@ variable "single_nat_gateway" {
 # ---------- application ----------
 
 variable "container_image" {
-  type        = string
+  type = string
 }
 
 variable "container_port" {
@@ -57,36 +57,36 @@ variable "certificate_arn" {
 }
 
 variable "task_cpu" {
-  type    = number
+  type = number
 }
 
 variable "task_memory" {
-  type    = number
+  type = number
 }
 
 variable "desired_count" {
-  type    = number
+  type = number
 }
 
 variable "min_count" {
-  type    = number
+  type = number
 }
 
 variable "max_count" {
-  type    = number
+  type = number
 }
 
 # ---------- database ----------
 
 variable "db_instance_class" {
-  type    = string
+  type = string
 }
 
 variable "db_multi_az" {
-  type    = bool
+  type = bool
 }
 
 # ---------- logging ----------
 variable "log_retention_days" {
-  type    = number
+  type = number
 }

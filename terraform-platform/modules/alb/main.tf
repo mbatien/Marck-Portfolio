@@ -1,17 +1,17 @@
 resource "aws_security_group" "alb" {
-  name = "${var.name}-alb"
+  name        = "${var.name}-alb"
   description = "Internet to ALB"
-    vpc_id = var.vpc_id
-    tags = { Name = "${var.name}-alb" }
+  vpc_id      = var.vpc_id
+  tags        = { Name = "${var.name}-alb" }
 }
 
 resource "aws_vpc_security_group_ingress_rule" "http" {
-   security_group_id = aws_security_group.alb.id
-   description = "HTTP from the internet (redirected to HTTPS when a certificate is set)"
-    cidr_ipv4 = "0.0.0.0/0"
-    ip_protocol = "tcp"
-    from_port = 80
-    to_port = 80 
+  security_group_id = aws_security_group.alb.id
+  description       = "HTTP from the internet (redirected to HTTPS when a certificate is set)"
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "tcp"
+  from_port         = 80
+  to_port           = 80
 }
 
 resource "aws_vpc_security_group_ingress_rule" "https" {

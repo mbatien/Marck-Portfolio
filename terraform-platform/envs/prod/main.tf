@@ -57,24 +57,24 @@ module "ecs_service" {
   target_group_arn      = module.alb.target_group_arn
   container_image       = var.container_image
   container_port        = var.container_port
-    task_cpu              = var.task_cpu
-    task_memory           = var.task_memory
-    desired_count         = var.desired_count
-    min_count             = var.min_count
-    max_count             = var.max_count
-    log_retention_days    = var.log_retention_days
+  task_cpu              = var.task_cpu
+  task_memory           = var.task_memory
+  desired_count         = var.desired_count
+  min_count             = var.min_count
+  max_count             = var.max_count
+  log_retention_days    = var.log_retention_days
 
-    environment_variables = {
-      APP_ENV = var.environment
-      DB_HOST = module.rds.address
-      DB_PORT = tostring(module.rds.port)
-        DB_NAME = module.rds.db_name
-    }
+  environment_variables = {
+    APP_ENV = var.environment
+    DB_HOST = module.rds.address
+    DB_PORT = tostring(module.rds.port)
+    DB_NAME = module.rds.db_name
+  }
 
-    secrets = {
-        DB_USERNAME = "${module.rds.master_user_secret_arn}:username::"
-        DB_PASSWORD = "${module.rds.master_user_secret_arn}:password::"
-    }
-    secret_arns = [module.rds.master_user_secret_arn]
+  secrets = {
+    DB_USERNAME = "${module.rds.master_user_secret_arn}:username::"
+    DB_PASSWORD = "${module.rds.master_user_secret_arn}:password::"
+  }
+  secret_arns = [module.rds.master_user_secret_arn]
 }
 

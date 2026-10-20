@@ -1,6 +1,6 @@
 output "app_url" {
   description = "open in a browser"
-  value = "http://${module.alb.dns_name}"
+  value       = "http://${module.alb.dns_name}"
 }
 
 output "ecr_repository_url" {

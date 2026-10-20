@@ -1,5 +1,5 @@
 variable "environment" {
-  type        = string
+  type = string
   validation {
     condition     = contains(["dev", "prod"], var.environment)
     error_message = "environment must be \"dev\" or \"prod\"."
@@ -7,12 +7,12 @@ variable "environment" {
 }
 
 variable "region" {
-    type   = string
-    default = "us-east-1"
+  type    = string
+  default = "us-east-1"
 }
 
 variable "owner" {
-  type        = string
+  type = string
 }
 
 variable "app_name" {
@@ -33,7 +33,7 @@ variable "single_nat_gateway" {
 }
 
 variable "container_image" {
-  type        = string
+  type = string
 }
 
 variable "container_port" {
@@ -45,8 +45,8 @@ variable "health_check_path" {
 }
 
 variable "certificate_arn" {
-  type        = string
-  default     = null
+  type    = string
+  default = null
 }
 
 variable "task_cpu" {
@@ -78,5 +78,5 @@ variable "db_multi_az" {
 }
 
 variable "log_retention_days" {
-  type    = number
+  type = number
 }

@@ -1,5 +1,5 @@
 variable "name" {
-  type        = string
+  type = string
 }
 
 variable "vpc_id" {
@@ -26,8 +26,8 @@ variable "health_check_path" {
 }
 
 variable "certificate_arn" {
-  type        = string
-  default     = null
+  type    = string
+  default = null
 }
 
 variable "deletion_protection" {

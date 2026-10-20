@@ -2,7 +2,7 @@
 
 resource "aws_ecr_repository" "this" {
   name                 = var.name
-  image_tag_mutability = "IMMUTABLE" 
+  image_tag_mutability = "IMMUTABLE"
   force_delete         = var.force_delete
 
   image_scanning_configuration {
