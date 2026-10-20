@@ -37,9 +37,9 @@ modules/                  reusable building blocks (each has its own variables/o
 envs/
   dev/                    cheap and disposable (1 NAT, 1 task, single-AZ DB)
   prod/                   resilient (NAT per AZ, 3 tasks, Multi-AZ DB, deletion protection)
-.tflint.hcl               TFLint rules (Terraform + AWS rulesets)
-.pre-commit-config.yaml   fmt, validate, TFLint, Checkov and gitleaks on every commit
 ```
+
+The TFLint rules (`.tflint.hcl`) and the pre-commit hooks (`.pre-commit-config.yaml`) live at the repository root, because pre-commit only reads its config from there.
 
 ## Prerequisites
 
@@ -48,10 +48,11 @@ Terraform >= 1.11, AWS CLI v2 with credentials for your account, TFLint, Checkov
 ## Getting started
 
 ```bash
-# 0. Install the commit hooks once, then check everything locally
+# 0. From the repository root: install the commit hooks once, then check everything
 pre-commit install
+tflint --init --config .tflint.hcl
 pre-commit run --all-files          # fmt, validate, TFLint, Checkov, gitleaks
-tflint --init
+cd terraform-platform
 
 # 1. Bootstrap (once, local state)
 cd bootstrap
@@ -118,6 +119,7 @@ terraform -chdir=envs/dev destroy
 - **Running Terraform from a module folder.** Running `plan` inside `modules/alb` prompted for `public_subnet_ids`, because modules are not root configurations and get their inputs from the environment that calls them. Fix: always run from `envs/dev` or `envs/prod`, where the values come from `terraform.tfvars` and other modules' outputs.
 - **Provider deprecation.** AWS provider v6 deprecated `data.aws_region.*.name`. Fix: switched to `.region` and tightened the provider constraint to `>= 6.0, < 7.0` so the code and the constraint agree.
 - **A `.gitignore` that silently did nothing.** It was written from PowerShell in UTF-16, which Git can't read, so state files and `.terraform/` were not ignored. Fix: rewrote it as UTF-8 and checked `git status` before committing.
+- **Commit hooks that never ran.** The pre-commit config sat inside `terraform-platform/`, but this folder is part of a larger repository, and pre-commit only reads `.pre-commit-config.yaml` from the repository root. No check ran, so formatting issues slipped into commits. Fix: moved the config and `.tflint.hcl` to the root and ran `pre-commit run --all-files` once to clean up.
 
 ## Next steps
 
