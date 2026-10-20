@@ -1,10 +1,15 @@
-tests/
+# Keep the build context small: only requirements.txt and app/ are needed.
+# "**/" makes a pattern match at any depth (unlike .gitignore, Docker matches from the root only).
+**/__pycache__/
+**/*.pyc
 .pytest_cache/
 .ruff_cache/
-__pycache__/
-*.pyc
 .venv/
+.env
+tests/
+iam/
+Dockerfile
+.dockerignore
 docker-compose.yml
 buildspec.yml
 README.md
-iam/

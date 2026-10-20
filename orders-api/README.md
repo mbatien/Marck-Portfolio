@@ -62,7 +62,7 @@ Region: **us-east-1** everywhere.
 
 ### Step 1: Point the infrastructure at the app
 
-The app runs as a non-root user, which can't listen on port 80, so it uses **8080** and serves its health check at **/health**. Three changes in `terraform-platform/` (already made in this commit):
+The app runs as a non-root user, which can't listen on port 80, so it uses **8080** and serves its health check at **/health**. Three changes in `terraform-platform/` (already made in this repository):
 
 - `envs/dev/terraform.tfvars` (and `envs/prod/`): `container_port = 8080`, `health_check_path = "/health"`
 - `modules/ecs-service/main.tf`: `ignore_changes = [desired_count, task_definition]` on the service, so `terraform apply` doesn't roll back the image the pipeline deployed.
