@@ -77,4 +77,3 @@ module "ecs_service" {
   }
   secret_arns = [module.rds.master_user_secret_arn]
 }
-

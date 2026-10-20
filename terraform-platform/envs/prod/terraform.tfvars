@@ -19,4 +19,4 @@ max_count     = 6
 db_instance_class = "db.t4g.small"
 db_multi_az       = true
 
-log_retention_days = 30 
+log_retention_days = 30
