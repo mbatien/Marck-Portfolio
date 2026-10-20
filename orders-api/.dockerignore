@@ -1,0 +1,10 @@
+tests/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.pyc
+.venv/
+docker-compose.yml
+buildspec.yml
+README.md
+iam/

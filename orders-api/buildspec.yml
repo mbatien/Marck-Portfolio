@@ -1,0 +1,53 @@
+# CodeBuild: lint, test against a real PostgreSQL, build the image, push it to ECR,
+# and hand CodePipeline's ECS deploy action an imagedefinitions.json.
+#
+# Required CodeBuild settings:
+#   - Image: aws/codebuild/standard:7.0, Privileged mode ON (needed to run Docker)
+#   - Environment variable REPOSITORY_URI = <account>.dkr.ecr.us-east-1.amazonaws.com/orders-api-dev
+#   - Service role has the permissions in iam/codebuild-ecr-policy.json
+version: 0.2
+
+env:
+  variables:
+    CONTAINER_NAME: app # must match the container name in the ECS task definition
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.12
+    commands:
+      - cd "$CODEBUILD_SRC_DIR/orders-api"
+      - pip install --quiet -r requirements-dev.txt
+
+  pre_build:
+    commands:
+      - cd "$CODEBUILD_SRC_DIR/orders-api"
+      # Tag every image with the commit it was built from. The ECR repo has
+      # IMMUTABLE tags, so a tag like "latest" could only ever be pushed once.
+      - COMMIT="${CODEBUILD_RESOLVED_SOURCE_VERSION:-manual}"
+      - IMAGE_TAG="$(echo "$COMMIT" | cut -c1-12)-${CODEBUILD_BUILD_NUMBER}"
+      - echo "Image tag $IMAGE_TAG"
+      - aws ecr get-login-password --region "$AWS_DEFAULT_REGION" | docker login --username AWS --password-stdin "${REPOSITORY_URI%%/*}"
+      # Lint, then run the tests against a throwaway PostgreSQL 16
+      - ruff check .
+      - docker run -d --name testdb -p 5432:5432 -e POSTGRES_DB=orders -e POSTGRES_USER=orders -e POSTGRES_PASSWORD=orders public.ecr.aws/docker/library/postgres:16
+      - for i in $(seq 1 30); do docker exec testdb pg_isready -U orders && break; sleep 1; done
+      - DB_SSLMODE=disable python -m pytest -q
+
+  build:
+    commands:
+      - cd "$CODEBUILD_SRC_DIR/orders-api"
+      - docker build --build-arg BUILDKIT_INLINE_CACHE=1 -t "$REPOSITORY_URI:$IMAGE_TAG" .
+
+  post_build:
+    commands:
+      # Only push and deploy when everything above succeeded.
+      - if [ "$CODEBUILD_BUILD_SUCCEEDING" != "1" ]; then echo "Build failed, not pushing"; exit 1; fi
+      - docker push "$REPOSITORY_URI:$IMAGE_TAG"
+      - printf '[{"name":"%s","imageUri":"%s"}]' "$CONTAINER_NAME" "$REPOSITORY_URI:$IMAGE_TAG" > "$CODEBUILD_SRC_DIR/imagedefinitions.json"
+      - cat "$CODEBUILD_SRC_DIR/imagedefinitions.json"
+
+artifacts:
+  base-directory: $CODEBUILD_SRC_DIR
+  files:
+    - imagedefinitions.json
