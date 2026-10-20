@@ -182,8 +182,10 @@ resource "aws_ecs_service" "app" {
   }
 
   lifecycle {
-    # Auto scaling changes desired_count; don't let Terraform fight it.
-    ignore_changes = [desired_count]
+    # Auto scaling changes desired_count, and the CodePipeline deploy (Project 2)
+    # registers new task definition revisions with new images. Don't let
+    # Terraform fight either one.
+    ignore_changes = [desired_count, task_definition]
   }
 }
 
