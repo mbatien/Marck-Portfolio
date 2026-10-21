@@ -60,6 +60,10 @@ def root():
 def health():
     """Liveness for the ALB health check. Deliberately does not touch the database,
     so a database blip doesn't make the ALB pull every task out of service."""
+    # TEMP: rollback test. Fails only when deployed (APP_ENV set), so unit tests pass.
+    # Revert this after the rollback test.
+    if os.environ.get("APP_ENV", "local") != "local":
+        return JSONResponse(status_code=503, content={"status": "unhealthy"})
     return {"status": "ok"}
 
 
