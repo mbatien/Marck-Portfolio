@@ -10,7 +10,7 @@ version: 0.2
 env:
   variables:
     CONTAINER_NAME: app # must match the container name in the ECS task definition
-
+    REPOSITORY_URI: 945360924569.dkr.ecr.us-east-1.amazonaws.com/orders-api-dev
 phases:
   install:
     runtime-versions:
