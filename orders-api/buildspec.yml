@@ -31,7 +31,16 @@ phases:
       # Lint, then run the tests against a throwaway PostgreSQL 16
       - ruff check .
       - docker run -d --name testdb -p 5432:5432 -e POSTGRES_DB=orders -e POSTGRES_USER=orders -e POSTGRES_PASSWORD=orders public.ecr.aws/docker/library/postgres:16
-      - for i in $(seq 1 30); do docker exec testdb pg_isready -U orders && break; sleep 1; done
+      # Wait over TCP (-h), not the socket: the image's init server is socket-only
+      - |
+        for i in $(seq 1 60); do
+          docker exec testdb pg_isready -h 127.0.0.1 -U orders && break
+          sleep 1
+        done
+      - docker ps -a; docker port testdb; docker logs --tail 20 testdb
+      # Connect to the container's own IP, so the tests don't depend on port publishing
+      - export DB_HOST="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' testdb)"
+      - echo "Testing against $DB_HOST"
       - DB_SSLMODE=disable python -m pytest -q
 
   build:
