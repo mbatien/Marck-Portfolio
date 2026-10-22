@@ -8,7 +8,7 @@ Lab environments are temporary, so every lab here is documented with the CLI com
 
 | Lab | Services | Tools | What it shows |
 | --- | --- | --- | --- |
-| *(add a row per lab)* | | | |
+| [CI/CD for a static website with CodePipeline](codepipeline-s3-static-website/) | S3, CodePipeline, CodeBuild, IAM, EventBridge | Console | Automated deploy on every source change; S3 static hosting; least-privilege CodeBuild role |
 
 ## Layout
 

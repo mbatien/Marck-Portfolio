@@ -1,0 +1,9 @@
+# Entered in the console as "Insert build commands".
+# Replace <deployment-bucket> with the website bucket name.
+version: 0.2
+
+phases:
+  build:
+    commands:
+      - echo "Publishing index.html to the website bucket"
+      - aws s3 cp index.html s3://<deployment-bucket>/
