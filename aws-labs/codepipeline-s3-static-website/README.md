@@ -11,8 +11,8 @@ Automate deployment of a static website. Whenever `index.html` changes in a sour
 ```
   Source S3 bucket            CodePipeline                     Deployment S3 bucket
   (versioned)        ──►  Source ──► Build (CodeBuild)  ──►   (static website, public read)
-  index.html change         │          aws s3 cp index.html          │
-       │                    │                                        ▼
+  index.html change          │     aws s3 cp source → website        │
+       │                     │                                       ▼
        └── EventBridge rule starts the pipeline           http://<bucket>.s3-website-us-east-1.amazonaws.com
 ```
 
@@ -20,16 +20,17 @@ There is no separate Deploy stage: the build step itself copies the file to the 
 
 | Resource | Name |
 | --- | --- |
-| Source bucket | `<source-bucket>` (existing, holds the site source) |
+| Source bucket | `<source-bucket>` (existing, holds a single `index.html`) |
 | Deployment bucket | `<deployment-bucket>` |
 | Pipeline | `webapp-pipeline` |
 | CodeBuild project | `webapp-build-project` |
 
 ## Solution (Console)
 
+The order matters: build the CodeBuild project and its permissions **before** the pipeline, so the pipeline's first run succeeds.
+
 ### 1. Prepare the source bucket
-1. **S3 → `<source-bucket>`** and note the exact name of the source object (used as the pipeline's object key).
-2. **Properties → Bucket Versioning → Edit → Enable.** CodePipeline only accepts a versioned bucket as an S3 source.
+**S3 → `<source-bucket>` → Properties → Bucket Versioning → Enable.** CodePipeline only accepts a versioned bucket as an S3 source.
 
 ### 2. Create the website bucket
 1. **S3 → Create bucket**: name `<deployment-bucket>`, region `us-east-1`.
@@ -37,21 +38,22 @@ There is no separate Deploy stage: the build step itself copies the file to the 
 3. **Properties → Static website hosting → Edit**: enable, host a static website, index document `index.html`.
 4. **Permissions → Bucket policy**: paste [`bucket-policy.json`](bucket-policy.json) (public `s3:GetObject` on the bucket's objects).
 
-### 3. Create the pipeline
-**CodePipeline → Create pipeline → Build custom pipeline**
-1. **Pipeline settings:** name `webapp-pipeline`, new service role.
-2. **Source stage:** provider Amazon S3, bucket `<source-bucket>`, object key from step 1. Change detection: **Amazon EventBridge** (starts the pipeline automatically when the object changes).
-3. **Build stage:** provider AWS CodeBuild → **Create project**:
-   - Name `webapp-build-project`
-   - Environment: managed image, Amazon Linux, image `aws/codebuild/amazonlinux2-x86_64-standard:4.0`, **Always use the latest image for this runtime version**
-   - Compute: 2 vCPUs, 4 GiB memory
-   - New service role
-   - Buildspec: **Insert build commands**, using [`buildspec.yml`](buildspec.yml)
-4. **Deploy stage:** skipped (the build step publishes the file).
-5. **Create pipeline**, which triggers the first run.
+### 3. Create the CodeBuild project
+**CodeBuild → Create build project**
+- Name `webapp-build-project`, source **No source** (CodePipeline supplies it)
+- Environment: managed image, Amazon Linux, image `aws/codebuild/amazonlinux2-x86_64-standard:4.0`, **Always use the latest image for this runtime version**, compute 2 vCPUs / 4 GiB memory, new service role
+- Buildspec: **Insert build commands → Switch to editor**, using [`buildspec.yml`](buildspec.yml)
 
-### 4. Give CodeBuild access to the website bucket
-The role the console creates for CodeBuild only covers the pipeline's artifact bucket, so the copy needs permission on the website bucket too. **IAM → Roles → `codebuild-webapp-build-project-service-role` → Add permissions**, using [`codebuild-s3-policy.json`](codebuild-s3-policy.json).
+### 4. Give the CodeBuild role access to both buckets
+**IAM → Roles → `codebuild-webapp-build-project-service-role` → Add permissions → Create inline policy**, using [`codebuild-s3-policy.json`](codebuild-s3-policy.json): `s3:GetObject` on the source bucket and `s3:PutObject` on the website bucket, nothing more.
+
+### 5. Create the pipeline
+**CodePipeline → Create pipeline → Build custom pipeline**
+1. Name `webapp-pipeline`, new service role.
+2. **Source:** Amazon S3, bucket `<source-bucket>`, object key `index.html`, change detection **Amazon EventBridge**.
+3. **Build:** **Other build providers → AWS CodeBuild**, project `webapp-build-project`. (Not the "Commands" option; see Troubleshooting.)
+4. **Deploy:** skip.
+5. **Create pipeline**, which triggers the first run.
 
 ## Verification
 
@@ -64,27 +66,33 @@ The role the console creates for CodeBuild only covers the pipeline's artifact b
   ```bash
   curl http://<deployment-bucket>.s3-website-us-east-1.amazonaws.com
   ```
-- Upload a changed `index.html` to the source bucket: the pipeline starts on its own and the website shows the new version.
+- Upload a changed `index.html` to the source bucket: the pipeline starts on its own and the site shows the new version.
 
 ## Troubleshooting
 
-Common failure points in this setup and their fixes:
+My first attempt ran out of lab time after four separate failures. Each one taught something, so here they are in the order I hit them.
 
-| Symptom | Cause | Fix |
-| --- | --- | --- |
-| Source stage fails, or the bucket is rejected when creating the pipeline | Source bucket not versioned | Enable Bucket Versioning on the source bucket |
-| Bucket policy won't save (`Access denied`) | Block Public Access still on | Turn off Block Public Access on the deployment bucket first |
-| Build fails with `AccessDenied` on `PutObject` | CodeBuild role can't write to the website bucket | Attach `codebuild-s3-policy.json` to the CodeBuild role, then **Retry** the stage |
-| Site returns 403 Forbidden | No public-read bucket policy | Add `bucket-policy.json` |
-| Browser downloads the page instead of showing it | Wrong `Content-Type` | `aws s3 cp` sets `text/html` automatically; if uploading another way, set it explicitly |
+| # | Error | Cause | Fix |
+| --- | --- | --- | --- |
+| 1 | `COMMAND_EXECUTION_ERROR: Error while executing command: version: 0.2. Reason: exit status 127` | In the pipeline wizard I picked the **Commands** build provider and pasted buildspec YAML into it. That box runs each line as a shell command, so the shell tried to run `version: 0.2`. | Use **Other build providers → AWS CodeBuild**. YAML belongs in the CodeBuild buildspec editor; the plain commands box takes commands only. |
+| 2 | `not authorized to perform: codebuild:StartBuild ... because no identity-based policy allows the codebuild:StartBuild action` | After switching the stage to CodeBuild, the pipeline's role still had the permissions generated for "Commands", which don't include starting CodeBuild builds. | Grant the **pipeline role** `codebuild:StartBuild` and `codebuild:BatchGetBuilds` on the project ([`codepipeline-codebuild-policy.json`](codepipeline-codebuild-policy.json)). Selecting CodeBuild while creating the pipeline avoids this entirely. |
+| 3 | `The user-provided path index.html does not exist.` | The source object is a bare `index.html`, not a `.zip`. CodePipeline hands S3 sources to CodeBuild as a zip archive, so a lone HTML file doesn't unpack as `index.html` in the build folder. | Copy straight from the source bucket: `aws s3 cp s3://<source-bucket>/index.html s3://<deployment-bucket>/`. (Or zip the site before uploading it as the source.) |
+| 4 | `An error occurred (403) when calling the HeadObject operation: Forbidden` | The **CodeBuild role** had no permission to read the source bucket. | Inline policy on the CodeBuild role: `s3:GetObject` on the source bucket, `s3:PutObject` on the website bucket. |
 
-<!-- Add anything that went wrong during your own run here. -->
+Other common failure points in this setup:
+
+| Symptom | Fix |
+| --- | --- |
+| Source bucket rejected when creating the pipeline | Enable Bucket Versioning on it |
+| Bucket policy won't save (`Access denied`) | Turn off Block Public Access on the website bucket first |
+| Site returns 403 Forbidden | Add the public-read bucket policy |
 
 ## What I learned
 
-- A CodePipeline S3 source needs a **versioned** bucket, and EventBridge change detection is what makes the pipeline run on every upload.
-- CodeBuild can act as the deploy step by running AWS CLI commands, but its IAM role must be granted access to every bucket it writes to. Least privilege means granting only `s3:PutObject` on that one bucket.
-- Making an S3 site public takes two separate settings: Block Public Access off, and a bucket policy that grants `s3:GetObject`.
+- **Two roles, two jobs.** The pipeline role needs permission to *start* CodeBuild; the CodeBuild role needs permission to touch the *S3 buckets*. A 403 or AccessDenied error tells you which role by naming it (`assumed-role/<role-name>`).
+- **Read the phase in the build log.** `DOWNLOAD_SOURCE` succeeded every time, which ruled out the source stage and pointed each error at the build commands or permissions.
+- **CodePipeline passes artifacts as zip files.** A non-zip S3 source object doesn't unpack as-is, so either zip the source or read the object directly from the bucket.
+- **Order resources by dependency.** Building the CodeBuild project and its IAM permissions before the pipeline avoids half the errors above.
 
 ## Screenshots
 

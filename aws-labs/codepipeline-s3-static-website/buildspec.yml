@@ -1,9 +1,10 @@
-# Entered in the console as "Insert build commands".
-# Replace <deployment-bucket> with the website bucket name.
+# Entered in the CodeBuild console under Buildspec -> Insert build commands -> Switch to editor.
+# The source object is a bare index.html (not a .zip), so the file is copied
+# straight from the source bucket instead of from CodePipeline's input artifact.
 version: 0.2
 
 phases:
   build:
     commands:
       - echo "Publishing index.html to the website bucket"
-      - aws s3 cp index.html s3://<deployment-bucket>/
+      - aws s3 cp s3://<source-bucket>/index.html s3://<deployment-bucket>/
