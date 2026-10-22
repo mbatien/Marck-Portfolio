@@ -95,3 +95,7 @@ Account IDs and usernames are blurred.
 **ALB security group: HTTP 80 open to the internet**
 
 ![nautilus-sg inbound HTTP from 0.0.0.0/0](screenshots/05-alb-sg-public-http.png)
+
+**Nginx page served through the ALB's DNS name** (the address label was added because the browser capture doesn't include the address bar)
+
+![Welcome to nginx page loaded through the load balancer](screenshots/06-nginx-via-alb.png)
