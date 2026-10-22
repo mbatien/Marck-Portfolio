@@ -6,6 +6,7 @@ Two connected projects: an AWS platform built with Terraform (Project 1), and an
 Marck-Portfolio/
 ├── terraform-platform/   Project 1: VPC, ALB, ECS Fargate, RDS, ECR (Terraform)
 ├── orders-api/           Project 2: FastAPI app, Dockerfile, CodeBuild pipeline
+├── aws-labs/             Hands-on AWS lab tasks (CLI, Console, Terraform)
 ├── .pre-commit-config.yaml
 └── .tflint.hcl
 ```
@@ -25,3 +26,7 @@ See the [project README](terraform-platform/README.md) for the architecture, des
 A Python (FastAPI) orders service on PostgreSQL, deployed by an AWS-native pipeline: GitHub → CodePipeline → CodeBuild (lint, tests against a real PostgreSQL, Docker build, push to ECR) → rolling ECS deploy with automatic rollback. It runs on the Project 1 platform. See the [project README](orders-api/README.md) for the pipeline setup and design choices.
 
 **Stack:** AWS CodePipeline · CodeBuild · CodeConnections · ECR · ECS Fargate · Python · FastAPI · PostgreSQL · Docker
+
+## [AWS Labs](aws-labs/)
+
+Hands-on AWS tasks from the KodeKloud Engineer platform, each documented with the commands or Terraform code to reproduce it and a short write-up of the problem, the solution and what went wrong along the way.
