@@ -70,7 +70,7 @@ The order matters: build the CodeBuild project and its permissions **before** th
 
 ## Troubleshooting
 
-My first attempt ran out of lab time after four separate failures. Each one taught something, so here they are in the order I hit them.
+My first attempt ran out of lab time after four separate failures, and the second attempt hit one more. Each one taught something, so here they are in the order I hit them.
 
 | # | Error | Cause | Fix |
 | --- | --- | --- | --- |
@@ -78,6 +78,7 @@ My first attempt ran out of lab time after four separate failures. Each one taug
 | 2 | `not authorized to perform: codebuild:StartBuild ... because no identity-based policy allows the codebuild:StartBuild action` | After switching the stage to CodeBuild, the pipeline's role still had the permissions generated for "Commands", which don't include starting CodeBuild builds. | Grant the **pipeline role** `codebuild:StartBuild` and `codebuild:BatchGetBuilds` on the project ([`codepipeline-codebuild-policy.json`](codepipeline-codebuild-policy.json)). Selecting CodeBuild while creating the pipeline avoids this entirely. |
 | 3 | `The user-provided path index.html does not exist.` | The source object is a bare `index.html`, not a `.zip`. CodePipeline hands S3 sources to CodeBuild as a zip archive, so a lone HTML file doesn't unpack as `index.html` in the build folder. | Copy straight from the source bucket: `aws s3 cp s3://<source-bucket>/index.html s3://<deployment-bucket>/`. (Or zip the site before uploading it as the source.) |
 | 4 | `An error occurred (403) when calling the HeadObject operation: Forbidden` | The **CodeBuild role** had no permission to read the source bucket. | Inline policy on the CodeBuild role: `s3:GetObject` on the source bucket, `s3:PutObject` on the website bucket. |
+| 5 | Deploy stage: `The input artifact .../BuildArtif/... does not exist ... NoSuchKey (404)` | On the second attempt the pipeline still had a Deploy (Amazon S3) stage. It expects an output artifact from the Build stage, but the buildspec only copies the file and declares no `artifacts` section, so there was nothing to deploy. | Delete the Deploy stage (the build step already publishes the site), then **Release change**. |
 
 Other common failure points in this setup:
 
@@ -96,10 +97,16 @@ Other common failure points in this setup:
 
 ## Screenshots
 
-Save these in [`screenshots/`](screenshots/) and blur account IDs and usernames:
+Account IDs and usernames are blurred.
 
-1. `01-pipeline-succeeded.png`: the pipeline with both stages green
-2. `02-codebuild-logs.png`: build logs showing the `aws s3 cp` upload
-3. `03-website-hosting.png`: the bucket's Static website hosting settings
-4. `04-website-live.png`: the site open in the browser
-5. `05-auto-trigger.png`: (optional) a second run started automatically after changing `index.html`
+**Pipeline: both stages succeeded**
+
+![Pipeline with Source and Build stages succeeded](screenshots/01-pipeline-succeeded.png)
+
+**CodeBuild log: `index.html` copied to the website bucket**
+
+![CodeBuild log showing the aws s3 cp upload and BUILD State: SUCCEEDED](screenshots/02-codebuild-logs.png)
+
+**Website bucket: static website hosting enabled**
+
+![S3 static website hosting enabled with the bucket website endpoint](screenshots/03-website-hosting.png)
