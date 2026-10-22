@@ -110,3 +110,7 @@ Account IDs and usernames are blurred.
 **Website bucket: static website hosting enabled**
 
 ![S3 static website hosting enabled with the bucket website endpoint](screenshots/03-website-hosting.png)
+
+**Live site served from the S3 website endpoint**
+
+![The deployed index.html loading from the S3 static website endpoint](screenshots/04-website-live.png)
