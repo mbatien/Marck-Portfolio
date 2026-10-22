@@ -8,6 +8,7 @@ Lab environments are temporary, so every lab here is documented with the CLI com
 
 | Lab | Services | Tools | What it shows |
 | --- | --- | --- | --- |
+| [Application Load Balancer in front of EC2](alb-ec2-nginx/) | EC2, ALB, Target groups, Security groups | Console | Internet-facing ALB across multiple AZs; health-checked targets; security-group chaining so only the ALB reaches the instance |
 | [CI/CD for a static website with CodePipeline](codepipeline-s3-static-website/) | S3, CodePipeline, CodeBuild, IAM, EventBridge | Console | Automated deploy on every source change; S3 static hosting; least-privilege CodeBuild role |
 
 ## Layout
