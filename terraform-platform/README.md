@@ -39,19 +39,18 @@ envs/
   prod/                   resilient (NAT per AZ, 3 tasks, Multi-AZ DB, deletion protection)
 ```
 
-The TFLint rules (`.tflint.hcl`) and the pre-commit hooks (`.pre-commit-config.yaml`) live at the repository root, because pre-commit only reads its config from there.
+The TFLint rules (`.tflint.hcl`) live at the repository root. A pre-commit config (`.pre-commit-config.yaml`) is there too, but it isn't working yet; see Next steps.
 
 ## Prerequisites
 
-Terraform >= 1.11, AWS CLI v2 with credentials for your account, TFLint, Checkov, pre-commit, and the AWS Session Manager plugin (only needed for ECS Exec into running containers).
+Terraform >= 1.11, AWS CLI v2 with credentials for your account, TFLint, and the AWS Session Manager plugin (only needed for ECS Exec into running containers).
 
 ## Getting started
 
 ```bash
-# 0. From the repository root: install the commit hooks once, then check everything
-pre-commit install
+# 0. From the repository root: lint the Terraform code
 tflint --init --config .tflint.hcl
-pre-commit run --all-files          # fmt, validate, TFLint, Checkov, gitleaks
+tflint --recursive --config "$(pwd)/.tflint.hcl"
 cd terraform-platform
 
 # 1. Bootstrap (once, local state)
@@ -82,7 +81,7 @@ terraform init && terraform plan -out=tfplan && terraform apply tfplan
 
 Every change follows the same workflow, run from my laptop:
 
-1. **Commit:** pre-commit runs `terraform fmt`, `terraform validate`, TFLint, Checkov and gitleaks. A failing check blocks the commit.
+1. **Lint:** `terraform fmt`, `terraform validate` and TFLint before committing.
 2. **Plan:** `terraform plan -out=tfplan` in the environment's folder, and read every change.
 3. **Apply the saved plan:** `terraform apply tfplan`, so what gets applied is exactly what was reviewed. Dev first, prod only after dev works.
 
@@ -93,7 +92,7 @@ Every change follows the same workflow, run from my laptop:
 - **Native S3 state locking** (`use_lockfile`) instead of a DynamoDB table.
 - **Data subnets without an internet route**: the database can't reach or be reached from the internet.
 - **RDS-managed master password** in Secrets Manager, injected into ECS at task start, so no secret is in code, state or the task definition.
-- **Checks before every commit** (TFLint, Checkov, gitleaks) so mistakes, insecure settings and leaked secrets are caught before they reach AWS or GitHub.
+- **Lint before committing** with TFLint, so mistakes and deprecated syntax are caught before they reach AWS.
 - **Apply only a saved plan** so nothing changes between review and apply.
 
 ## Known limitations (good interview material)
@@ -119,10 +118,11 @@ terraform -chdir=envs/dev destroy
 - **Running Terraform from a module folder.** Running `plan` inside `modules/alb` prompted for `public_subnet_ids`, because modules are not root configurations and get their inputs from the environment that calls them. Fix: always run from `envs/dev` or `envs/prod`, where the values come from `terraform.tfvars` and other modules' outputs.
 - **Provider deprecation.** AWS provider v6 deprecated `data.aws_region.*.name`. Fix: switched to `.region` and tightened the provider constraint to `>= 6.0, < 7.0` so the code and the constraint agree.
 - **A `.gitignore` that silently did nothing.** It was written from PowerShell in UTF-16, which Git can't read, so state files and `.terraform/` were not ignored. Fix: rewrote it as UTF-8 and checked `git status` before committing.
-- **Commit hooks that never ran.** The pre-commit config sat inside `terraform-platform/`, but this folder is part of a larger repository, and pre-commit only reads `.pre-commit-config.yaml` from the repository root. No check ran, so formatting issues slipped into commits. Fix: moved the config and `.tflint.hcl` to the root and ran `pre-commit run --all-files` once to clean up.
+- **Commit hooks that never ran.** The pre-commit config sat inside `terraform-platform/`, but this folder is part of a larger repository, and pre-commit only reads `.pre-commit-config.yaml` from the repository root. Moving it to the root fixed that, but the Checkov and gitleaks hooks still didn't work, so for now I run TFLint directly and the full hook setup is listed under Next steps.
 
 ## Next steps
 
+- Get the pre-commit hooks working (fmt, validate, TFLint, Checkov security scan, gitleaks secret scan)
 - CI pipeline: checks and plan on pull requests, apply after approval
 - HTTPS with a custom domain (ACM + Route 53)
 - Split state into network / data / app layers
